@@ -1,34 +1,184 @@
 <link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../paper-tabs/paper-tabs.html">
+<link rel="import" href="../paper-tabs/paper-tab.html">
+<link rel="import" href="../oc-product-tags/oc-product-tags.html">
+<link rel="import" href="../paper-material/paper-material.html">
+<link rel="import" href="../oc-product-tag-api/oc-product-tag-api.html">
 
 <!--
 `oc-local-tags`
-Element to create and manage local product tags on the Ordercloud platform
+Element to create and manage tags in the product library section of the Ordercloud platform
 
-@demo demo/index.html 
+@demo demo/index.html
 -->
 
 <dom-module id="oc-local-tags">
+
   <template>
-    <style>
+    <style include="oc-app-styles">
       :host {
         display: block;
       }
+      paper-tabs {
+        background-color: var(--primary-color);
+        --paper-tabs-selection-bar-color: #fff;
+        margin: 10px;
+      }
+      paper-tab {
+        color: #fff;
+        --paper-tab-ink: #fff;
+      }
+      oc-product-tags {
+        padding: 20px;
+      }
+
+      paper-material {
+        background-color: #fff;
+        margin-left: 10px;
+        margin-right: 10px;
+      }
     </style>
-    <h2>Hello [[prop1]]</h2>
+
+    <oc-product-tag-api id="tagApi"></oc-product-tag-api>
+
+    <paper-tabs selected="[[routeData.tab]]" attr-for-selected="tag-type" on-tap="_selectTab">
+      <paper-tab tag-type="products">Product</paper-tab>
+      <paper-tab tag-type="menu">Menu</paper-tab>
+      <paper-tab tag-type="search">Search</paper-tab>
+    </paper-tabs>
+
+
+
+    <paper-material>
+      <paper-progress indeterminate hidden$="[[ !loading ]]"></paper-progress>
+      <oc-product-tags
+              id="tagsView"
+              loading="{{ loading }}"
+              tag-type="[[ routeData.tab ]]"
+              organisation-id="[[ organisationId ]]"
+              tags="[[tags]]"
+              total-items="[[totalItems]]"
+              page-size="[[pageSize]]"
+      ></oc-product-tags>
+    </paper-material>
+
   </template>
 
   <script>
     Polymer({
-
       is: 'oc-local-tags',
 
       properties: {
-        prop1: {
-          type: String,
-          value: 'oc-local-tags',
+        organisationId: Number,
+        loading: {
+          type: Boolean,
+          notify: true
         },
+        active: Boolean,
+        route: Object,
+        routeData: {
+          type: Object,
+          notify: true
+        }
+      },
+
+      observers: [
+        'refresh(routeData.tab, organisationId)'
+      ],
+
+      listeners : {
+        "enabled-toggle" : "_toggleTagEnabled",
+        "tag-create" : "_createTag",
+        "tag-edit" : "_editTag",
+        "tag-delete" : "_deleteTag",
+      },
+
+      refresh: function(tagType, organisationId) {
+
+        if(tagType){
+          this._getTags(tagType, 1, 10, true)
+        } else {
+          this._selectDefaultTab(this.routeData.tab)
+        }
+
+      },
+
+      _selectTab: function(event) {
+        this.fire('oc-page-to', event.target.getAttribute('tag-type'));
+      },
+
+      _selectDefaultTab: function(tab) {
+        if (!tab) {
+          this.fire('oc-page-to', '/tags/products');
+        }
+      },
+
+      _getTags : function(tagType, pageNum, pageSize, showDisabled){
+        this.loading = true;
+        params = {};
+        params.page = pageNum;
+        params.pageSize = pageSize;
+        params.showDisabled = showDisabled;
+
+        this.$.tagApi.getTags(tagType, params)
+                .then(function(request){
+                  this.tags = request.response.results;
+                  this.totalItems = request.response.count;
+                  this.currentPage = 1;
+                  this.pageSize = pageSize;
+                }.bind(this))
+                .catch(function() {
+                  this.fire('toast', 'Failed to fetch tags');
+                }.bind(this))
+                .finally(function() {
+                  this.loading = false;
+                  console.log('tags', this.tags)
+                }.bind(this));
+      },
+
+      _toggleTagEnabled : function(e) {
+        var toggleBtn = event.detail.toggleBtn,
+                tag = event.detail.tag;
+        this.$.tagApi.toggleEnabled(tag.id, toggleBtn.checked)
+                .then(this.fire.bind(this, 'toast', '"' + tag.name + '" tag ' + (toggleBtn.checked ? 'enabled' : 'disabled')))
+                .catch(function() {
+                  this.fire('toast', 'Failed to ' + (toggleBtn.checked ? 'enabled' : 'disabled') + ' "' + tag.name + '" tag');
+                  toggleBtn.checked = tag.enabled === 'enabled';
+                }.bind(this));
+      },
+
+      _createTag: function(e) {
+        var tag = e.detail;
+        this.$.tagApi.createTag(tag)
+                .then(function(){
+                  this.refresh(this.routeData.tab, this.organisationId);
+                }.bind(this))
+                .then(this.fire.bind(this, 'toast', '"' + tag.name + '" tag created'))
+                .catch(this.fire.bind(this, 'toast', 'Failed to create "' + tag.name + '" tag'));
+      },
+
+      _editTag: function(e) {
+        var tag = e.detail;
+        this.$.tagApi.updateTag(tag)
+                .then(function(){
+                  this.refresh(this.routeData.tab, this.organisationId);
+                }.bind(this))
+                .then(this.fire.bind(this, 'toast', '"' + tag.name + '" tag updated'))
+                .catch(this.fire.bind(this, 'toast', 'Failed to update "' + tag.name + '" tag'));
+      },
+
+      _deleteTag: function(e) {
+        var tag = e.detail;
+        this.$.tagApi.deleteTag(tag.id)
+                .then(function(){
+                  this.refresh(this.routeData.tab, this.organisationId);
+                }.bind(this))
+                .then(this.fire.bind(this, 'toast', '"' + tag.name + '" tag deleted'))
+                .catch(this.fire.bind(this, 'toast', 'Failed to delete "' + tag.name + '" tag'));
       },
 
     });
+
   </script>
+
 </dom-module>
