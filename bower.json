@@ -4,9 +4,10 @@
   "main": "oc-local-tags.html",
   "dependencies": {
     "polymer": "Polymer/polymer#^1.4.0",
-    "paper-tabs": "PolymerElements/paper-tabs#^1.6.2",
+    "paper-tabs": "PolymerElements/paper-tabs#^1.0.0",
     "oc-product-tags": "git://github.com/oc-elements/oc-product-tags.git#1.x",
-    "paper-material": "PolymerElements/paper-material#^1.0.6"
+    "paper-material": "PolymerElements/paper-material#^1.0.0",
+    "paper-progress": "PolymerElements/paper-progress#^1.0.0"
   },
   "devDependencies": {
     "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",

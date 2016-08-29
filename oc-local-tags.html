@@ -4,6 +4,7 @@
 <link rel="import" href="../oc-product-tags/oc-product-tags.html">
 <link rel="import" href="../paper-material/paper-material.html">
 <link rel="import" href="../oc-product-tag-api/oc-product-tag-api.html">
+<link rel="import" href="../paper-progress/paper-progress.html">
 
 <!--
 `oc-local-tags`
@@ -104,7 +105,7 @@ Element to create and manage tags in the product library section of the Orderclo
       },
 
       _selectTab: function(event) {
-        this.fire('oc-page-to', event.target.getAttribute('tag-type'));
+        this.fire('oc-page-to', '/tags/'+event.target.getAttribute('tag-type'));
       },
 
       _selectDefaultTab: function(tab) {
@@ -127,12 +128,8 @@ Element to create and manage tags in the product library section of the Orderclo
                   this.currentPage = 1;
                   this.pageSize = pageSize;
                 }.bind(this))
-                .catch(function() {
-                  this.fire('toast', 'Failed to fetch tags');
-                }.bind(this))
-                .finally(function() {
-                  this.loading = false;
-                }.bind(this));
+                .catch(this.fire.bind(this, 'options_error', 'Could not load tags'))
+                .finally(this.set.bind(this, 'loading', false));
       },
 
       _toggleTagEnabled : function(e) {
